@@ -81,7 +81,7 @@ const NearbyFeed = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("public_sightings" as any)
-        .select("id, name, scientific_name, threat_level, conservation_status, profile, habitat, confidence, lat, lng, image_thumbnail, created_at")
+        .select("id, name, scientific_name, threat_level, conservation_status, profile, habitat, confidence, lat, lng, created_at")
         .order("created_at", { ascending: false })
         .limit(30);
 
