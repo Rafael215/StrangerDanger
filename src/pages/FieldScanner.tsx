@@ -2,8 +2,11 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { saveToPlantCollection, isPlantInCollection } from "@/lib/collection";
 import {
   ArrowLeft,
+  BookmarkPlus,
+  BookmarkCheck,
   ScanLine,
   Camera,
   CameraOff,
