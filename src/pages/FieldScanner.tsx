@@ -310,6 +310,8 @@ const FieldScanner = () => {
             <div className="space-y-2 mb-6">
               {scanResult.labels.map((label, i) => {
                 const Icon = categoryIcon[label.category] || Eye;
+                const isPlant = label.category === "plant";
+                const alreadySaved = isPlant && isPlantInCollection(label.name);
                 return (
                   <motion.div
                     key={i}
@@ -331,6 +333,28 @@ const FieldScanner = () => {
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{label.detail}</p>
                       </div>
+                      {isPlant && (
+                        <button
+                          onClick={() => {
+                            if (alreadySaved) return;
+                            saveToPlantCollection({
+                              name: label.name,
+                              scientificName: "",
+                              category: "plant",
+                              detail: label.detail,
+                              edible: label.threatLevel === "safe",
+                              medicinal: false,
+                              toxic: label.threatLevel === "danger",
+                              imagePreview: imagePreview || undefined,
+                            });
+                            toast.success(`${label.name} saved to Field Guide!`);
+                          }}
+                          disabled={alreadySaved}
+                          className={`shrink-0 mt-0.5 ${alreadySaved ? "text-safe" : "text-muted-foreground hover:text-primary"} transition-colors`}
+                        >
+                          {alreadySaved ? <BookmarkCheck className="w-4 h-4" /> : <BookmarkPlus className="w-4 h-4" />}
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 );
