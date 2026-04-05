@@ -1,14 +1,16 @@
 import { useState, useRef, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import HeroSection from "@/components/HeroSection";
 import ImageUploader from "@/components/ImageUploader";
 import ResultCard, { type AnimalResult } from "@/components/ResultCard";
 import { motion } from "framer-motion";
-import { Binoculars } from "lucide-react";
+import { Binoculars, BookOpen } from "lucide-react";
 
 const Index = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnimalResult | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const uploadRef = useRef<HTMLDivElement>(null);
 
   const scrollToUpload = () => {
@@ -18,6 +20,7 @@ const Index = () => {
   const handleImageSelected = useCallback(async (file: File) => {
     setIsAnalyzing(true);
     setResult(null);
+    setImagePreview(null);
 
     try {
       const base64 = await fileToBase64(file);
@@ -50,6 +53,7 @@ const Index = () => {
 
       const data = await response.json();
       setResult(data);
+      setImagePreview(base64);
     } catch (err) {
       console.error(err);
       toast.error("Something went wrong. Please try again.");
@@ -60,6 +64,15 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Floating nav */}
+      <Link
+        to="/field-guide"
+        className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm font-medium text-foreground hover:text-primary transition-colors"
+      >
+        <BookOpen className="w-4 h-4" />
+        Field Guide
+      </Link>
+
       <HeroSection onScrollToUpload={scrollToUpload} />
 
       {/* Upload Section */}
@@ -100,7 +113,7 @@ const Index = () => {
                   Analysis Complete
                 </div>
               </div>
-              <ResultCard result={result} />
+              <ResultCard result={result} imagePreview={imagePreview ?? undefined} />
             </div>
           )}
         </div>
