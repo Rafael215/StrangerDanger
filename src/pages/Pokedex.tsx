@@ -8,12 +8,14 @@ import {
   ArrowLeft,
   Trash2,
   BookOpen,
+  TreePine,
 } from "lucide-react";
 import {
   getCollection,
   removeFromCollection,
   type CollectionEntry,
 } from "@/lib/collection";
+import { isEndangered } from "@/components/ConservationBanner";
 
 const threatBadge = {
   Safe: { icon: Shield, className: "threat-safe", ring: "ring-safe/30" },
