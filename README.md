@@ -40,6 +40,52 @@ Built for hackathon — covers **multi-device hardware**, **AI/ML**, and **conse
 
 ## Architecture
 
+```mermaid
+graph TD
+    subgraph Client["Frontend (React + Vite)"]
+        UI[UI Components]
+        CAM[Camera API]
+        MIC[Microphone API]
+        GEO[Geolocation API]
+        LS[LocalStorage - Field Guide]
+    end
+
+    subgraph Edge["Edge Functions (Deno)"]
+        ID[identify-animal]
+        SND[identify-animal-sound]
+        VID[identify-video]
+        FS[field-scan]
+        CHAT[animal-chat]
+        ST[sound-training]
+        SFX[elevenlabs-sfx]
+        SS[survival-scenario]
+        HB[habitat-briefing]
+        PS[post-sighting]
+    end
+
+    subgraph AI["AI Services"]
+        GEM[Gemini 2.5 Flash]
+        EL[ElevenLabs API]
+    end
+
+    subgraph DB["PostgreSQL"]
+        SIGHT[sightings table]
+    end
+
+    UI --> CAM & MIC & GEO
+    CAM --> ID & VID & FS
+    MIC --> SND
+    UI --> CHAT & ST & SS & HB
+
+    ID & SND & VID & FS & CHAT & ST & SS & HB --> GEM
+    SFX --> EL
+    ST --> SFX
+
+    PS --> SIGHT
+    GEO --> PS
+    UI --> LS
+```
+
 ## 🚀 Getting Started
 
 ```bash
