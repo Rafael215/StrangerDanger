@@ -64,6 +64,15 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Floating nav */}
+      <Link
+        to="/field-guide"
+        className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm font-medium text-foreground hover:text-primary transition-colors"
+      >
+        <BookOpen className="w-4 h-4" />
+        Field Guide
+      </Link>
+
       <HeroSection onScrollToUpload={scrollToUpload} />
 
       {/* Upload Section */}
