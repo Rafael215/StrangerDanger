@@ -14,22 +14,22 @@ serve(async (req) => {
   try {
     const { action, habitat, difficulty } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     if (action === "generate_quiz") {
       const systemPrompt = `You are a wildlife audio expert creating an animal sound identification quiz. Generate a quiz card about an animal sound that hikers might hear in the wild. Include a vivid text description of what the sound is like so users can learn to recognize it.`;
 
       const userPrompt = `Create an animal sound quiz for a ${difficulty || "medium"} difficulty level${habitat ? ` in a ${habitat} habitat` : ""}. The user should try to guess what animal makes this sound based on your description.`;
 
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "gemini-2.5-flash",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
