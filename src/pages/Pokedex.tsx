@@ -8,12 +8,14 @@ import {
   ArrowLeft,
   Trash2,
   BookOpen,
+  TreePine,
 } from "lucide-react";
 import {
   getCollection,
   removeFromCollection,
   type CollectionEntry,
 } from "@/lib/collection";
+import { isEndangered } from "@/components/ConservationBanner";
 
 const threatBadge = {
   Safe: { icon: Shield, className: "threat-safe", ring: "ring-safe/30" },
@@ -44,6 +46,7 @@ const Pokedex = () => {
     safe: entries.filter((e) => e.threatLevel === "Safe").length,
     caution: entries.filter((e) => e.threatLevel === "Caution").length,
     danger: entries.filter((e) => e.threatLevel === "Danger").length,
+    endangered: entries.filter((e) => isEndangered(e.conservationStatus)).length,
   };
 
   return (
@@ -71,13 +74,14 @@ const Pokedex = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-4 gap-3 mb-8"
+          className="grid grid-cols-5 gap-3 mb-8"
         >
           {[
             { label: "Total", value: stats.total, color: "text-foreground" },
             { label: "Safe", value: stats.safe, color: "text-safe" },
             { label: "Caution", value: stats.caution, color: "text-caution" },
             { label: "Danger", value: stats.danger, color: "text-danger" },
+            { label: "At Risk", value: stats.endangered, color: "text-conservation" },
           ].map((s) => (
             <div
               key={s.label}
@@ -151,6 +155,12 @@ const Pokedex = () => {
                           {entry.threatLevel}
                         </div>
                       </div>
+                      {isEndangered(entry.conservationStatus) && (
+                        <div className="flex items-center gap-1 text-conservation text-[10px] font-semibold mb-1">
+                          <TreePine className="w-3 h-3" />
+                          {entry.conservationStatus}
+                        </div>
+                      )}
                       <p className="text-xs text-muted-foreground line-clamp-2">
                         {entry.profile}
                       </p>

@@ -14,6 +14,7 @@ import {
   BookmarkCheck,
 } from "lucide-react";
 import { saveToCollection, isInCollection } from "@/lib/collection";
+import ConservationBanner from "@/components/ConservationBanner";
 
 export interface AnimalResult {
   name: string;
@@ -142,10 +143,11 @@ const ResultCard = ({
           </div>
         </div>
 
+        {/* Conservation Banner */}
+        <ConservationBanner status={result.conservationStatus} />
+
         {/* Divider */}
         <div className="h-px bg-border mx-6" />
-
-        {/* Threat reason */}
         <div className="px-6 py-4">
           <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/30">
             <Heart className="w-4 h-4 text-primary mt-0.5 shrink-0" />
