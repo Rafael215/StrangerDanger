@@ -48,9 +48,22 @@ const threatConfig = {
   },
 };
 
-const ResultCard = ({ result }: { result: AnimalResult }) => {
+const ResultCard = ({
+  result,
+  imagePreview,
+}: {
+  result: AnimalResult;
+  imagePreview?: string;
+}) => {
   const threat = threatConfig[result.threatLevel];
   const ThreatIcon = threat.icon;
+  const [saved, setSaved] = useState(() => isInCollection(result.name));
+
+  const handleSave = () => {
+    saveToCollection(result, imagePreview);
+    setSaved(true);
+    toast.success(`${result.name} added to your Field Guide!`);
+  };
 
   return (
     <motion.div
