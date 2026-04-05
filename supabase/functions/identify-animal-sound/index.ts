@@ -36,7 +36,14 @@ Be accurate with your identification. If you're unsure, give a lower confidence 
 
 If the audio does not contain an identifiable animal sound, still use the tool but set the name to "Unknown" with low confidence and provide general wildlife safety tips.`;
 
-    const resolvedMime = mimeType || "audio/webm";
+    // Gemini API only accepts "wav" or "mp3" as format strings
+    const formatMap: Record<string, string> = {
+      "audio/webm": "mp3", "audio/webm; codecs=opus": "mp3",
+      "audio/ogg": "mp3", "audio/ogg; codecs=opus": "mp3",
+      "audio/wav": "wav", "audio/x-wav": "wav", "audio/wave": "wav",
+      "audio/mp3": "mp3", "audio/mpeg": "mp3",
+    };
+    const resolvedFormat = formatMap[(mimeType || "audio/webm").toLowerCase()] || "mp3";
 
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
@@ -57,7 +64,7 @@ If the audio does not contain an identifiable animal sound, still use the tool b
                   type: "input_audio",
                   input_audio: {
                     data: audio.includes(",") ? audio.split(",")[1] : audio,
-                    format: resolvedMime,
+                    format: resolvedFormat,
                   },
                 },
                 {

@@ -44,11 +44,17 @@ Be accurate with your identification. If you're unsure, give a lower confidence 
     }
 
     if (audio) {
+      const formatMap: Record<string, string> = {
+        "audio/webm": "mp3", "audio/webm; codecs=opus": "mp3",
+        "audio/ogg": "mp3", "audio/wav": "wav", "audio/x-wav": "wav",
+        "audio/mp3": "mp3", "audio/mpeg": "mp3",
+      };
+      const resolvedFormat = formatMap[(mimeType || "audio/webm").toLowerCase()] || "mp3";
       userContent.push({
         type: "input_audio",
         input_audio: {
           data: audio.replace(/^data:[^;]+;base64,/, ""),
-          format: mimeType?.includes("wav") ? "wav" : "mp3",
+          format: resolvedFormat,
         },
       });
     }
