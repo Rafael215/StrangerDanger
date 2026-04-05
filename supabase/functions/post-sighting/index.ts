@@ -92,11 +92,6 @@ Deno.serve(async (req) => {
       sighting_id: data.id,
     });
 
-    if (error) {
-      console.error("Insert error:", error);
-      throw new Error(error.message);
-    }
-
     return new Response(JSON.stringify({ success: true, id: data.id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
