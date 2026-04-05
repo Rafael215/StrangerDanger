@@ -4,12 +4,13 @@ import { toast } from "sonner";
 import HeroSection from "@/components/HeroSection";
 import ImageUploader from "@/components/ImageUploader";
 import AudioUploader from "@/components/AudioUploader";
+import VideoUploader from "@/components/VideoUploader";
 import ResultCard, { type AnimalResult } from "@/components/ResultCard";
 import { motion } from "framer-motion";
-import { Binoculars, BookOpen, Camera, Volume2, MapPin } from "lucide-react";
+import { Binoculars, BookOpen, Camera, Volume2, MapPin, Video, GraduationCap } from "lucide-react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 
-type Mode = "image" | "audio";
+type Mode = "image" | "audio" | "video";
 
 const Index = () => {
   const [mode, setMode] = useState<Mode>("image");
