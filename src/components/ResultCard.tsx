@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   Shield,
   AlertTriangle,
@@ -8,7 +10,10 @@ import {
   MapPin,
   Heart,
   ChevronRight,
+  BookmarkPlus,
+  BookmarkCheck,
 } from "lucide-react";
+import { saveToCollection, isInCollection } from "@/lib/collection";
 
 export interface AnimalResult {
   name: string;
