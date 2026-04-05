@@ -20,9 +20,9 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not configured");
     }
 
     const systemPrompt = `You are an expert wildlife biologist and bioacoustics specialist. Given an audio recording, identify the animal based on its sound (call, song, vocalization, etc.) and provide a safety assessment.
@@ -39,15 +39,15 @@ If the audio does not contain an identifiable animal sound, still use the tool b
     const resolvedMime = mimeType || "audio/webm";
 
     const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "gemini-2.5-flash",
           messages: [
             { role: "system", content: systemPrompt },
             {

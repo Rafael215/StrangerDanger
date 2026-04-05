@@ -19,8 +19,8 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const systemPrompt = `You are an expert field naturalist with AR overlay capabilities. Given an image of a natural environment, identify ALL visible elements: animals, plants, terrain features, tracks, signs of wildlife activity, water sources, potential hazards, and shelter opportunities.
 
@@ -28,14 +28,14 @@ Return structured labels that could be overlaid on the image as AR tags. Each la
 
 Be thorough — identify at least 4-8 elements. Include both obvious and subtle things a trained naturalist would notice.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           {

@@ -20,8 +20,8 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const systemPrompt = `You are an expert wildlife biologist having a conversation about a specific animal that was just identified. Here is the context about the animal:
 
@@ -36,15 +36,15 @@ Threat Reason: ${animalContext.threatReason}
 Answer the user's follow-up questions about this animal. Be educational, accurate, and safety-focused. Keep answers concise (2-4 sentences) unless the user asks for more detail. If asked about something unrelated to wildlife, gently redirect back to the animal topic.`;
 
     const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "gemini-2.5-flash",
           messages: [
             { role: "system", content: systemPrompt },
             ...messages,
