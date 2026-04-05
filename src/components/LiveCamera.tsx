@@ -21,10 +21,6 @@ export default function LiveCamera({ onResult, isAnalyzing, setIsAnalyzing }: Li
       const ms = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = ms;
-        try { await videoRef.current.play(); } catch {}
-      }
       setStream(ms);
       setCameraActive(true);
     } catch {
@@ -37,6 +33,14 @@ export default function LiveCamera({ onResult, isAnalyzing, setIsAnalyzing }: Li
     setStream(null);
     setCameraActive(false);
   }, [stream]);
+
+  // Attach stream to video element AFTER it's rendered
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [stream, cameraActive]);
 
   useEffect(() => {
     return () => {
