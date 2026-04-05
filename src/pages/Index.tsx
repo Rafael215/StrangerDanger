@@ -6,7 +6,8 @@ import ImageUploader from "@/components/ImageUploader";
 import AudioUploader from "@/components/AudioUploader";
 import ResultCard, { type AnimalResult } from "@/components/ResultCard";
 import { motion } from "framer-motion";
-import { Binoculars, BookOpen, Camera, Volume2 } from "lucide-react";
+import { Binoculars, BookOpen, Camera, Volume2, MapPin } from "lucide-react";
+import { useGeolocation } from "@/hooks/use-geolocation";
 
 type Mode = "image" | "audio";
 
