@@ -263,6 +263,17 @@ const Index = () => {
               <Volume2 className="w-4 h-4" />
               Sound
             </button>
+            <button
+              onClick={() => { setMode("video"); setResult(null); }}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
+                mode === "video"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Video className="w-4 h-4" />
+              Video
+            </button>
           </div>
 
           {mode === "image" ? (
@@ -270,9 +281,14 @@ const Index = () => {
               onImageSelected={handleImageSelected}
               isAnalyzing={isAnalyzing}
             />
-          ) : (
+          ) : mode === "audio" ? (
             <AudioUploader
               onAudioSelected={handleAudioSelected}
+              isAnalyzing={isAnalyzing}
+            />
+          ) : (
+            <VideoUploader
+              onVideoProcessed={handleVideoProcessed}
               isAnalyzing={isAnalyzing}
             />
           )}
