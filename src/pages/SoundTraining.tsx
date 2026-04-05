@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -6,14 +6,14 @@ import {
   ArrowLeft,
   Headphones,
   Loader2,
-  ChevronRight,
   CheckCircle2,
   XCircle,
   SkipForward,
-  Trophy,
   Lightbulb,
   Volume2,
   Eye,
+  Play,
+  Pause,
 } from "lucide-react";
 
 interface SoundOption {
@@ -24,6 +24,7 @@ interface SoundOption {
 
 interface SoundQuiz {
   soundDescription: string;
+  audioPrompt: string;
   timeOfDay: string;
   habitat: string;
   hint: string;
@@ -49,12 +50,17 @@ const SoundTraining = () => {
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [difficulty, setDifficulty] = useState("medium");
   const [revealed, setRevealed] = useState(false);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
 
   const fetchQuiz = async () => {
     setLoading(true);
     setSelectedId(null);
     setShowHint(false);
     setRevealed(false);
+    cleanupAudio();
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sound-training`,
@@ -76,6 +82,68 @@ const SoundTraining = () => {
       toast.error("Failed to load quiz.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cleanupAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+    setIsPlaying(false);
+  };
+
+  const playSound = async () => {
+    if (!quiz) return;
+
+    // If already loaded, toggle play/pause
+    if (audioRef.current && audioUrlRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current.currentTime = 0;
+        await audioRef.current.play();
+        setIsPlaying(true);
+      }
+      return;
+    }
+
+    setAudioLoading(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ prompt: quiz.audioPrompt, duration: 5 }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Audio generation failed");
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      audioUrlRef.current = audioUrl;
+
+      const audio = new Audio(audioUrl);
+      audio.onended = () => setIsPlaying(false);
+      audioRef.current = audio;
+
+      await audio.play();
+      setIsPlaying(true);
+    } catch {
+      toast.error("Failed to generate sound. Try again.");
+    } finally {
+      setAudioLoading(false);
     }
   };
 
@@ -121,7 +189,7 @@ const SoundTraining = () => {
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-2">Animal Sound Training</h2>
               <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                Learn to identify animals by their calls — a critical wilderness skill for hikers and naturalists
+                Listen to real AI-generated animal calls and learn to identify them — a critical wilderness skill
               </p>
             </div>
 
@@ -177,10 +245,39 @@ const SoundTraining = () => {
                   <span className="text-xs text-muted-foreground">{quiz.timeOfDay} · {quiz.habitat}</span>
                 </div>
 
+                {/* Audio player */}
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
+                  <div className="flex items-center gap-4">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={playSound}
+                      disabled={audioLoading}
+                      className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0"
+                    >
+                      {audioLoading ? (
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      ) : isPlaying ? (
+                        <Pause className="w-6 h-6" />
+                      ) : (
+                        <Play className="w-6 h-6 ml-0.5" />
+                      )}
+                    </motion.button>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {audioLoading ? "Generating sound..." : isPlaying ? "Playing..." : "Tap to listen"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        AI-generated animal sound
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="bg-secondary/50 rounded-xl p-5 mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Volume2 className="w-5 h-5 text-primary" />
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">You hear this sound...</span>
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Sound description</span>
                   </div>
                   <p className="text-foreground leading-relaxed text-lg italic">
                     "{quiz.soundDescription}"
