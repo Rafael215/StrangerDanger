@@ -20,6 +20,7 @@ const Index = () => {
   const handleImageSelected = useCallback(async (file: File) => {
     setIsAnalyzing(true);
     setResult(null);
+    setImagePreview(null);
 
     try {
       const base64 = await fileToBase64(file);
