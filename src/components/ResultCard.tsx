@@ -160,8 +160,31 @@ const ResultCard = ({
           </div>
         </div>
 
-        {/* Survival Tips */}
+        {/* Save + Survival Tips */}
         <div className="px-6 pb-6">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleSave}
+            disabled={saved}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-sm mb-5 transition-colors ${
+              saved
+                ? "bg-safe/20 text-safe cursor-default"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
+            }`}
+          >
+            {saved ? (
+              <>
+                <BookmarkCheck className="w-4 h-4" />
+                Saved to Field Guide
+              </>
+            ) : (
+              <>
+                <BookmarkPlus className="w-4 h-4" />
+                Save to Field Guide
+              </>
+            )}
+          </motion.button>
           <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">
             Survival Tips
           </p>
