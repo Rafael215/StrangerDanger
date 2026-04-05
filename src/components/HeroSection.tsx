@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Shield, Camera, Zap } from "lucide-react";
+import { Shield, Camera, Zap, TreePine } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 
 interface HeroSectionProps {
