@@ -5,12 +5,14 @@ import HeroSection from "@/components/HeroSection";
 import ImageUploader from "@/components/ImageUploader";
 import AudioUploader from "@/components/AudioUploader";
 import VideoUploader from "@/components/VideoUploader";
+import LiveCamera from "@/components/LiveCamera";
+import AnimalChat from "@/components/AnimalChat";
 import ResultCard, { type AnimalResult } from "@/components/ResultCard";
 import { motion } from "framer-motion";
-import { Binoculars, BookOpen, Camera, Volume2, MapPin, Video, GraduationCap } from "lucide-react";
+import { Binoculars, BookOpen, Camera, Volume2, MapPin, Video, GraduationCap, Aperture } from "lucide-react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 
-type Mode = "image" | "audio" | "video";
+type Mode = "image" | "audio" | "video" | "live";
 
 const Index = () => {
   const [mode, setMode] = useState<Mode>("image");
