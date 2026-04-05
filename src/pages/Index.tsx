@@ -299,10 +299,20 @@ const Index = () => {
               onAudioSelected={handleAudioSelected}
               isAnalyzing={isAnalyzing}
             />
-          ) : (
+          ) : mode === "video" ? (
             <VideoUploader
               onVideoProcessed={handleVideoProcessed}
               isAnalyzing={isAnalyzing}
+            />
+          ) : (
+            <LiveCamera
+              onResult={(data, frame) => {
+                setResult(data);
+                setImagePreview(frame);
+                postSighting(data, frame);
+              }}
+              isAnalyzing={isAnalyzing}
+              setIsAnalyzing={setIsAnalyzing}
             />
           )}
 
