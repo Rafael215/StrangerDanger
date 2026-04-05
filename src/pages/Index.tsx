@@ -190,6 +190,13 @@ const Index = () => {
       {/* Floating nav */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
         <Link
+          to="/learn"
+          className="flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm font-medium text-foreground hover:text-primary transition-colors"
+        >
+          <GraduationCap className="w-4 h-4" />
+          Learn
+        </Link>
+        <Link
           to="/nearby"
           className="flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm font-medium text-foreground hover:text-primary transition-colors"
         >
