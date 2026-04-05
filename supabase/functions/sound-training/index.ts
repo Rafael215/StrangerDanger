@@ -43,6 +43,7 @@ serve(async (req) => {
                 type: "object",
                 properties: {
                   soundDescription: { type: "string", description: "Vivid 2-3 sentence description of the sound (onomatopoeia encouraged)" },
+                  audioPrompt: { type: "string", description: "A short, literal sound-effect prompt for audio generation, e.g. 'wolf howling at night in a forest' or 'owl hooting softly'. Keep under 15 words, describe only the sound." },
                   timeOfDay: { type: "string", description: "When you'd typically hear this (dawn, day, dusk, night)" },
                   habitat: { type: "string", description: "Where you'd hear this sound" },
                   hint: { type: "string", description: "A subtle clue without giving away the answer" },
@@ -65,7 +66,7 @@ serve(async (req) => {
                   survivalNote: { type: "string", description: "What to do if you hear this sound while hiking" },
                   difficulty: { type: "string", enum: ["easy", "medium", "hard"] },
                 },
-                required: ["soundDescription", "timeOfDay", "habitat", "hint", "options", "correctId", "correctAnimal", "funFact", "survivalNote", "difficulty"],
+                required: ["soundDescription", "audioPrompt", "timeOfDay", "habitat", "hint", "options", "correctId", "correctAnimal", "funFact", "survivalNote", "difficulty"],
                 additionalProperties: false,
               },
             },
