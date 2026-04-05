@@ -23,6 +23,7 @@ export default function LiveCamera({ onResult, isAnalyzing, setIsAnalyzing }: Li
       });
       if (videoRef.current) {
         videoRef.current.srcObject = ms;
+        try { await videoRef.current.play(); } catch {}
       }
       setStream(ms);
       setCameraActive(true);
