@@ -60,6 +60,7 @@ export type Database = {
           image_thumbnail: string | null
           lat: number
           lng: number
+          location_label: string | null
           name: string
           profile: string
           scientific_name: string
@@ -74,6 +75,7 @@ export type Database = {
           image_thumbnail?: string | null
           lat: number
           lng: number
+          location_label?: string | null
           name: string
           profile: string
           scientific_name: string
@@ -88,6 +90,7 @@ export type Database = {
           image_thumbnail?: string | null
           lat?: number
           lng?: number
+          location_label?: string | null
           name?: string
           profile?: string
           scientific_name?: string
@@ -107,6 +110,7 @@ export type Database = {
           image_thumbnail: string | null
           lat: number | null
           lng: number | null
+          location_label: string | null
           name: string | null
           profile: string | null
           scientific_name: string | null
@@ -121,6 +125,7 @@ export type Database = {
           image_thumbnail?: string | null
           lat?: number | null
           lng?: number | null
+          location_label?: string | null
           name?: string | null
           profile?: string | null
           scientific_name?: string | null
@@ -135,6 +140,7 @@ export type Database = {
           image_thumbnail?: string | null
           lat?: number | null
           lng?: number | null
+          location_label?: string | null
           name?: string | null
           profile?: string | null
           scientific_name?: string | null

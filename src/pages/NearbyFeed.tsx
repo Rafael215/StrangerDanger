@@ -27,6 +27,7 @@ interface Sighting {
   lat: number;
   lng: number;
   image_thumbnail: string | null;
+  location_label: string | null;
   created_at: string;
 }
 
@@ -81,7 +82,7 @@ const NearbyFeed = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("public_sightings" as any)
-        .select("id, name, scientific_name, threat_level, conservation_status, profile, habitat, confidence, lat, lng, created_at")
+        .select("id, name, scientific_name, threat_level, conservation_status, profile, habitat, confidence, lat, lng, location_label, created_at")
         .order("created_at", { ascending: false })
         .limit(30);
 
@@ -219,9 +220,15 @@ const NearbyFeed = () => {
 
                       <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
                         <span>{timeAgo(s.created_at)}</span>
-                        {s.distance !== null && (
+                        {s.location_label && (
                           <span className="flex items-center gap-0.5">
                             <MapPin className="w-2.5 h-2.5" />
+                            {s.location_label}
+                          </span>
+                        )}
+                        {s.distance !== null && (
+                          <span className="flex items-center gap-0.5">
+                            <Navigation className="w-2.5 h-2.5" />
                             {formatDistance(s.distance)}
                           </span>
                         )}
