@@ -70,6 +70,7 @@ const HeroSection = ({ onScrollToUpload }: HeroSectionProps) => {
             {[
               { icon: Camera, text: "Photo ID" },
               { icon: Shield, text: "Threat Assessment" },
+              { icon: TreePine, text: "Conservation Alerts" },
               { icon: Zap, text: "Instant Results" },
             ].map((feat) => (
               <div

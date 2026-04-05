@@ -204,7 +204,10 @@ const Index = () => {
           <p className="text-sm text-muted-foreground">
             <span className="text-foreground font-semibold">Stranger</span>
             <span className="text-primary font-semibold">Danger</span>
-            {" "}— AI wildlife safety for the modern explorer
+            {" "}— AI wildlife safety & conservation for the modern explorer
+          </p>
+          <p className="text-xs text-muted-foreground/60 mt-1">
+            Helping you stay safe while protecting endangered species
           </p>
         </div>
       </footer>
