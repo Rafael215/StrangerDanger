@@ -9,7 +9,7 @@ import LiveCamera from "@/components/LiveCamera";
 import AnimalChat from "@/components/AnimalChat";
 import ResultCard, { type AnimalResult } from "@/components/ResultCard";
 import { motion } from "framer-motion";
-import { Binoculars, BookOpen, Camera, Volume2, MapPin, Video, GraduationCap, Aperture } from "lucide-react";
+import { Binoculars, BookOpen, Camera, Volume2, MapPin, Video, GraduationCap, Aperture, Swords, Headphones, ScanLine } from "lucide-react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 
 type Mode = "image" | "audio" | "video" | "live";
