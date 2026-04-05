@@ -113,7 +113,7 @@ const Index = () => {
                   Analysis Complete
                 </div>
               </div>
-              <ResultCard result={result} />
+              <ResultCard result={result} imagePreview={imagePreview ?? undefined} />
             </div>
           )}
         </div>
