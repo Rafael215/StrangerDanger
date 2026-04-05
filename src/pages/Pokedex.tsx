@@ -46,6 +46,7 @@ const Pokedex = () => {
     safe: entries.filter((e) => e.threatLevel === "Safe").length,
     caution: entries.filter((e) => e.threatLevel === "Caution").length,
     danger: entries.filter((e) => e.threatLevel === "Danger").length,
+    endangered: entries.filter((e) => isEndangered(e.conservationStatus)).length,
   };
 
   return (
