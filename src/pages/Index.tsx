@@ -10,6 +10,7 @@ import { Binoculars, BookOpen } from "lucide-react";
 const Index = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnimalResult | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const uploadRef = useRef<HTMLDivElement>(null);
 
   const scrollToUpload = () => {
