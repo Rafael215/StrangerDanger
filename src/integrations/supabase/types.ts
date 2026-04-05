@@ -14,9 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      rate_limit_log: {
+        Row: {
+          client_ip: string
+          created_at: string
+          id: string
+          sighting_id: string | null
+        }
+        Insert: {
+          client_ip: string
+          created_at?: string
+          id?: string
+          sighting_id?: string | null
+        }
+        Update: {
+          client_ip?: string
+          created_at?: string
+          id?: string
+          sighting_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_limit_log_sighting_id_fkey"
+            columns: ["sighting_id"]
+            isOneToOne: false
+            referencedRelation: "public_sightings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rate_limit_log_sighting_id_fkey"
+            columns: ["sighting_id"]
+            isOneToOne: false
+            referencedRelation: "sightings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sightings: {
         Row: {
-          client_ip: string | null
           confidence: number
           conservation_status: string
           created_at: string
@@ -31,7 +66,6 @@ export type Database = {
           threat_level: string
         }
         Insert: {
-          client_ip?: string | null
           confidence: number
           conservation_status: string
           created_at?: string
@@ -46,7 +80,6 @@ export type Database = {
           threat_level: string
         }
         Update: {
-          client_ip?: string | null
           confidence?: number
           conservation_status?: string
           created_at?: string
