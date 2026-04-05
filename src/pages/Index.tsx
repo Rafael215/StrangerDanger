@@ -276,6 +276,17 @@ const Index = () => {
               <Video className="w-4 h-4" />
               Video
             </button>
+            <button
+              onClick={() => { setMode("live"); setResult(null); }}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
+                mode === "live"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Aperture className="w-4 h-4" />
+              Live
+            </button>
           </div>
 
           {mode === "image" ? (
