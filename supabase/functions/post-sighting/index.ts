@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
       "unknown";
 
     const body = await req.json();
-    const { name, scientificName, threatLevel, conservationStatus, profile, habitat, confidence, lat, lng, imageThumbnail } = body;
+    const { name, scientificName, threatLevel, conservationStatus, profile, habitat, confidence, lat, lng, imageThumbnail, locationLabel } = body;
 
     if (!name || !scientificName || !threatLevel || !lat || !lng) {
       return new Response(
@@ -49,6 +49,24 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Reverse geocode to get location label if not provided
+    let resolvedLocation = locationLabel || null;
+    if (!resolvedLocation && lat && lng) {
+      try {
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=10`,
+          { headers: { "User-Agent": "StrangerDanger/1.0" } }
+        );
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          const addr = geoData.address;
+          resolvedLocation = addr?.city || addr?.town || addr?.village || addr?.county || geoData.display_name?.split(",").slice(0, 2).join(",").trim() || null;
+        }
+      } catch (e) {
+        console.warn("Reverse geocode failed:", e);
+      }
+    }
+
     const { data, error } = await supabase.from("sightings").insert({
       name,
       scientific_name: scientificName,
@@ -60,6 +78,7 @@ Deno.serve(async (req) => {
       lat,
       lng,
       image_thumbnail: imageThumbnail || null,
+      location_label: resolvedLocation,
     }).select().single();
 
     if (error) {
