@@ -53,6 +53,7 @@ const Index = () => {
 
       const data = await response.json();
       setResult(data);
+      setImagePreview(base64);
     } catch (err) {
       console.error(err);
       toast.error("Something went wrong. Please try again.");
