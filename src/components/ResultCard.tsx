@@ -14,6 +14,7 @@ import {
   BookmarkCheck,
 } from "lucide-react";
 import { saveToCollection, isInCollection } from "@/lib/collection";
+import ConservationBanner from "@/components/ConservationBanner";
 
 export interface AnimalResult {
   name: string;
