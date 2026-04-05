@@ -62,6 +62,10 @@ export default {
           DEFAULT: "hsl(var(--danger))",
           foreground: "hsl(var(--danger-foreground))",
         },
+        conservation: {
+          DEFAULT: "hsl(var(--conservation))",
+          foreground: "hsl(var(--conservation-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
