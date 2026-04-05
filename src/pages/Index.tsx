@@ -9,7 +9,7 @@ import LiveCamera from "@/components/LiveCamera";
 import AnimalChat from "@/components/AnimalChat";
 import ResultCard, { type AnimalResult } from "@/components/ResultCard";
 import { motion } from "framer-motion";
-import { Binoculars, BookOpen, Camera, Volume2, MapPin, Video, GraduationCap, Aperture } from "lucide-react";
+import { Binoculars, BookOpen, Camera, Volume2, MapPin, Video, GraduationCap, Aperture, Swords, Headphones, ScanLine } from "lucide-react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 
 type Mode = "image" | "audio" | "video" | "live";
@@ -190,27 +190,24 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Floating nav */}
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
-        <Link
-          to="/learn"
-          className="flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm font-medium text-foreground hover:text-primary transition-colors"
-        >
-          <GraduationCap className="w-4 h-4" />
-          Learn
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-2 flex-wrap justify-end">
+        <Link to="/learn" className="flex items-center gap-2 px-3 py-2 glass-card rounded-full text-xs font-medium text-foreground hover:text-primary transition-colors">
+          <GraduationCap className="w-3.5 h-3.5" /> Learn
         </Link>
-        <Link
-          to="/nearby"
-          className="flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm font-medium text-foreground hover:text-primary transition-colors"
-        >
-          <MapPin className="w-4 h-4" />
-          Nearby
+        <Link to="/survival" className="flex items-center gap-2 px-3 py-2 glass-card rounded-full text-xs font-medium text-foreground hover:text-primary transition-colors">
+          <Swords className="w-3.5 h-3.5" /> Survive
         </Link>
-        <Link
-          to="/field-guide"
-          className="flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm font-medium text-foreground hover:text-primary transition-colors"
-        >
-          <BookOpen className="w-4 h-4" />
-          Field Guide
+        <Link to="/sound-training" className="flex items-center gap-2 px-3 py-2 glass-card rounded-full text-xs font-medium text-foreground hover:text-primary transition-colors">
+          <Headphones className="w-3.5 h-3.5" /> Sounds
+        </Link>
+        <Link to="/field-scanner" className="flex items-center gap-2 px-3 py-2 glass-card rounded-full text-xs font-medium text-foreground hover:text-primary transition-colors">
+          <ScanLine className="w-3.5 h-3.5" /> Scanner
+        </Link>
+        <Link to="/nearby" className="flex items-center gap-2 px-3 py-2 glass-card rounded-full text-xs font-medium text-foreground hover:text-primary transition-colors">
+          <MapPin className="w-3.5 h-3.5" /> Nearby
+        </Link>
+        <Link to="/field-guide" className="flex items-center gap-2 px-3 py-2 glass-card rounded-full text-xs font-medium text-foreground hover:text-primary transition-colors">
+          <BookOpen className="w-3.5 h-3.5" /> Guide
         </Link>
       </div>
 
