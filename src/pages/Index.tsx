@@ -5,12 +5,14 @@ import HeroSection from "@/components/HeroSection";
 import ImageUploader from "@/components/ImageUploader";
 import AudioUploader from "@/components/AudioUploader";
 import VideoUploader from "@/components/VideoUploader";
+import LiveCamera from "@/components/LiveCamera";
+import AnimalChat from "@/components/AnimalChat";
 import ResultCard, { type AnimalResult } from "@/components/ResultCard";
 import { motion } from "framer-motion";
-import { Binoculars, BookOpen, Camera, Volume2, MapPin, Video, GraduationCap } from "lucide-react";
+import { Binoculars, BookOpen, Camera, Volume2, MapPin, Video, GraduationCap, Aperture } from "lucide-react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 
-type Mode = "image" | "audio" | "video";
+type Mode = "image" | "audio" | "video" | "live";
 
 const Index = () => {
   const [mode, setMode] = useState<Mode>("image");
@@ -274,6 +276,17 @@ const Index = () => {
               <Video className="w-4 h-4" />
               Video
             </button>
+            <button
+              onClick={() => { setMode("live"); setResult(null); }}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
+                mode === "live"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Aperture className="w-4 h-4" />
+              Live
+            </button>
           </div>
 
           {mode === "image" ? (
@@ -286,10 +299,20 @@ const Index = () => {
               onAudioSelected={handleAudioSelected}
               isAnalyzing={isAnalyzing}
             />
-          ) : (
+          ) : mode === "video" ? (
             <VideoUploader
               onVideoProcessed={handleVideoProcessed}
               isAnalyzing={isAnalyzing}
+            />
+          ) : (
+            <LiveCamera
+              onResult={(data, frame) => {
+                setResult(data);
+                setImagePreview(frame);
+                postSighting(data, frame);
+              }}
+              isAnalyzing={isAnalyzing}
+              setIsAnalyzing={setIsAnalyzing}
             />
           )}
 
@@ -306,6 +329,9 @@ const Index = () => {
           )}
         </div>
       </section>
+
+      {/* Follow-up chat FAB */}
+      {result && <AnimalChat animal={result} />}
 
       {/* Footer */}
       <footer className="border-t border-border py-8 px-4">
