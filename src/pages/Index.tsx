@@ -235,7 +235,7 @@ const Index = () => {
               Upload Your Sighting
             </h2>
             <p className="text-muted-foreground mt-2">
-              Take a photo or record the sound of the animal you encountered
+              Take a photo, record a sound, or upload a video of the animal you encountered
             </p>
           </motion.div>
 
