@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      sightings: {
+        Row: {
+          client_ip: string | null
+          confidence: number
+          conservation_status: string
+          created_at: string
+          habitat: string
+          id: string
+          image_thumbnail: string | null
+          lat: number
+          lng: number
+          name: string
+          profile: string
+          scientific_name: string
+          threat_level: string
+        }
+        Insert: {
+          client_ip?: string | null
+          confidence: number
+          conservation_status: string
+          created_at?: string
+          habitat: string
+          id?: string
+          image_thumbnail?: string | null
+          lat: number
+          lng: number
+          name: string
+          profile: string
+          scientific_name: string
+          threat_level: string
+        }
+        Update: {
+          client_ip?: string | null
+          confidence?: number
+          conservation_status?: string
+          created_at?: string
+          habitat?: string
+          id?: string
+          image_thumbnail?: string | null
+          lat?: number
+          lng?: number
+          name?: string
+          profile?: string
+          scientific_name?: string
+          threat_level?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
