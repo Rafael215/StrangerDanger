@@ -3,11 +3,15 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import HeroSection from "@/components/HeroSection";
 import ImageUploader from "@/components/ImageUploader";
+import AudioUploader from "@/components/AudioUploader";
 import ResultCard, { type AnimalResult } from "@/components/ResultCard";
 import { motion } from "framer-motion";
-import { Binoculars, BookOpen } from "lucide-react";
+import { Binoculars, BookOpen, Camera, Volume2 } from "lucide-react";
+
+type Mode = "image" | "audio";
 
 const Index = () => {
+  const [mode, setMode] = useState<Mode>("image");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnimalResult | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -62,6 +66,48 @@ const Index = () => {
     }
   }, []);
 
+  const handleAudioSelected = useCallback(async (base64: string, mimeType: string) => {
+    setIsAnalyzing(true);
+    setResult(null);
+    setImagePreview(null);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/identify-animal-sound`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ audio: base64, mimeType }),
+        }
+      );
+
+      if (response.status === 429) {
+        toast.error("Rate limit reached. Please try again in a moment.");
+        setIsAnalyzing(false);
+        return;
+      }
+      if (response.status === 402) {
+        toast.error("AI credits exhausted. Please add funds to continue.");
+        setIsAnalyzing(false);
+        return;
+      }
+      if (!response.ok) {
+        throw new Error("Failed to identify animal sound");
+      }
+
+      const data = await response.json();
+      setResult(data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Floating nav */}
@@ -96,14 +142,47 @@ const Index = () => {
               Upload Your Sighting
             </h2>
             <p className="text-muted-foreground mt-2">
-              Take or upload a photo of the animal you encountered
+              Take a photo or record the sound of the animal you encountered
             </p>
           </motion.div>
 
-          <ImageUploader
-            onImageSelected={handleImageSelected}
-            isAnalyzing={isAnalyzing}
-          />
+          {/* Mode Tabs */}
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <button
+              onClick={() => { setMode("image"); setResult(null); }}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
+                mode === "image"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Camera className="w-4 h-4" />
+              Photo
+            </button>
+            <button
+              onClick={() => { setMode("audio"); setResult(null); }}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
+                mode === "audio"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Volume2 className="w-4 h-4" />
+              Sound
+            </button>
+          </div>
+
+          {mode === "image" ? (
+            <ImageUploader
+              onImageSelected={handleImageSelected}
+              isAnalyzing={isAnalyzing}
+            />
+          ) : (
+            <AudioUploader
+              onAudioSelected={handleAudioSelected}
+              isAnalyzing={isAnalyzing}
+            />
+          )}
 
           {/* Results */}
           {result && (
