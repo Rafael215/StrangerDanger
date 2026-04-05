@@ -133,13 +133,14 @@ const Index = () => {
 
       const data = await response.json();
       setResult(data);
+      postSighting(data);
     } catch (err) {
       console.error(err);
       toast.error("Something went wrong. Please try again.");
     } finally {
       setIsAnalyzing(false);
     }
-  }, []);
+  }, [postSighting]);
 
   return (
     <div className="min-h-screen bg-background">
