@@ -45,7 +45,7 @@ const HeroSection = ({ onScrollToUpload }: HeroSectionProps) => {
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto mb-10 leading-relaxed">
             Snap a photo. Identify the animal. Know your threat level instantly.
-            Your AI field guide for staying safe in the wild.
+            Your AI field guide for staying safe — and protecting wildlife.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
