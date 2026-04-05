@@ -64,7 +64,51 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_sightings: {
+        Row: {
+          confidence: number | null
+          conservation_status: string | null
+          created_at: string | null
+          habitat: string | null
+          id: string | null
+          image_thumbnail: string | null
+          lat: number | null
+          lng: number | null
+          name: string | null
+          profile: string | null
+          scientific_name: string | null
+          threat_level: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          conservation_status?: string | null
+          created_at?: string | null
+          habitat?: string | null
+          id?: string | null
+          image_thumbnail?: string | null
+          lat?: number | null
+          lng?: number | null
+          name?: string | null
+          profile?: string | null
+          scientific_name?: string | null
+          threat_level?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          conservation_status?: string | null
+          created_at?: string | null
+          habitat?: string | null
+          id?: string | null
+          image_thumbnail?: string | null
+          lat?: number | null
+          lng?: number | null
+          name?: string | null
+          profile?: string | null
+          scientific_name?: string | null
+          threat_level?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
