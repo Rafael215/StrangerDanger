@@ -4,12 +4,13 @@ import { toast } from "sonner";
 import HeroSection from "@/components/HeroSection";
 import ImageUploader from "@/components/ImageUploader";
 import AudioUploader from "@/components/AudioUploader";
+import VideoUploader from "@/components/VideoUploader";
 import ResultCard, { type AnimalResult } from "@/components/ResultCard";
 import { motion } from "framer-motion";
-import { Binoculars, BookOpen, Camera, Volume2, MapPin } from "lucide-react";
+import { Binoculars, BookOpen, Camera, Volume2, MapPin, Video, GraduationCap } from "lucide-react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 
-type Mode = "image" | "audio";
+type Mode = "image" | "audio" | "video";
 
 const Index = () => {
   const [mode, setMode] = useState<Mode>("image");
@@ -142,10 +143,59 @@ const Index = () => {
     }
   }, [postSighting]);
 
+  const handleVideoProcessed = useCallback(async (frame: string, audio: string | null, mimeType: string) => {
+    setIsAnalyzing(true);
+    setResult(null);
+    setImagePreview(null);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/identify-video`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ frame, audio, mimeType }),
+        }
+      );
+
+      if (response.status === 429) {
+        toast.error("Rate limit reached. Please try again in a moment.");
+        setIsAnalyzing(false);
+        return;
+      }
+      if (response.status === 402) {
+        toast.error("AI credits exhausted.");
+        setIsAnalyzing(false);
+        return;
+      }
+      if (!response.ok) throw new Error("Failed to identify from video");
+
+      const data = await response.json();
+      setResult(data);
+      setImagePreview(frame);
+      postSighting(data, frame);
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [postSighting]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Floating nav */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+        <Link
+          to="/learn"
+          className="flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm font-medium text-foreground hover:text-primary transition-colors"
+        >
+          <GraduationCap className="w-4 h-4" />
+          Learn
+        </Link>
         <Link
           to="/nearby"
           className="flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm font-medium text-foreground hover:text-primary transition-colors"
@@ -185,7 +235,7 @@ const Index = () => {
               Upload Your Sighting
             </h2>
             <p className="text-muted-foreground mt-2">
-              Take a photo or record the sound of the animal you encountered
+              Take a photo, record a sound, or upload a video of the animal you encountered
             </p>
           </motion.div>
 
@@ -213,6 +263,17 @@ const Index = () => {
               <Volume2 className="w-4 h-4" />
               Sound
             </button>
+            <button
+              onClick={() => { setMode("video"); setResult(null); }}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
+                mode === "video"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Video className="w-4 h-4" />
+              Video
+            </button>
           </div>
 
           {mode === "image" ? (
@@ -220,9 +281,14 @@ const Index = () => {
               onImageSelected={handleImageSelected}
               isAnalyzing={isAnalyzing}
             />
-          ) : (
+          ) : mode === "audio" ? (
             <AudioUploader
               onAudioSelected={handleAudioSelected}
+              isAnalyzing={isAnalyzing}
+            />
+          ) : (
+            <VideoUploader
+              onVideoProcessed={handleVideoProcessed}
               isAnalyzing={isAnalyzing}
             />
           )}
