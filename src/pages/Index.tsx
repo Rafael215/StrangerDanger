@@ -1,10 +1,11 @@
 import { useState, useRef, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import HeroSection from "@/components/HeroSection";
 import ImageUploader from "@/components/ImageUploader";
 import ResultCard, { type AnimalResult } from "@/components/ResultCard";
 import { motion } from "framer-motion";
-import { Binoculars } from "lucide-react";
+import { Binoculars, BookOpen } from "lucide-react";
 
 const Index = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
