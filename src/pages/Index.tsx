@@ -6,7 +6,8 @@ import ImageUploader from "@/components/ImageUploader";
 import AudioUploader from "@/components/AudioUploader";
 import ResultCard, { type AnimalResult } from "@/components/ResultCard";
 import { motion } from "framer-motion";
-import { Binoculars, BookOpen, Camera, Volume2 } from "lucide-react";
+import { Binoculars, BookOpen, Camera, Volume2, MapPin } from "lucide-react";
+import { useGeolocation } from "@/hooks/use-geolocation";
 
 type Mode = "image" | "audio";
 
@@ -16,6 +17,37 @@ const Index = () => {
   const [result, setResult] = useState<AnimalResult | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const uploadRef = useRef<HTMLDivElement>(null);
+  const { lat, lng } = useGeolocation();
+
+  const postSighting = useCallback(async (animal: AnimalResult, thumbnail?: string) => {
+    if (!lat || !lng) return;
+    try {
+      await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/post-sighting`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            name: animal.name,
+            scientificName: animal.scientificName,
+            threatLevel: animal.threatLevel,
+            conservationStatus: animal.conservationStatus,
+            profile: animal.profile,
+            habitat: animal.habitat,
+            confidence: animal.confidence,
+            lat,
+            lng,
+            imageThumbnail: thumbnail || null,
+          }),
+        }
+      );
+    } catch (err) {
+      console.error("Failed to post sighting:", err);
+    }
+  }, [lat, lng]);
 
   const scrollToUpload = () => {
     uploadRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -58,13 +90,14 @@ const Index = () => {
       const data = await response.json();
       setResult(data);
       setImagePreview(base64);
+      postSighting(data, base64);
     } catch (err) {
       console.error(err);
       toast.error("Something went wrong. Please try again.");
     } finally {
       setIsAnalyzing(false);
     }
-  }, []);
+  }, [postSighting]);
 
   const handleAudioSelected = useCallback(async (base64: string, mimeType: string) => {
     setIsAnalyzing(true);
@@ -100,24 +133,34 @@ const Index = () => {
 
       const data = await response.json();
       setResult(data);
+      postSighting(data);
     } catch (err) {
       console.error(err);
       toast.error("Something went wrong. Please try again.");
     } finally {
       setIsAnalyzing(false);
     }
-  }, []);
+  }, [postSighting]);
 
   return (
     <div className="min-h-screen bg-background">
       {/* Floating nav */}
-      <Link
-        to="/field-guide"
-        className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm font-medium text-foreground hover:text-primary transition-colors"
-      >
-        <BookOpen className="w-4 h-4" />
-        Field Guide
-      </Link>
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+        <Link
+          to="/nearby"
+          className="flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm font-medium text-foreground hover:text-primary transition-colors"
+        >
+          <MapPin className="w-4 h-4" />
+          Nearby
+        </Link>
+        <Link
+          to="/field-guide"
+          className="flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm font-medium text-foreground hover:text-primary transition-colors"
+        >
+          <BookOpen className="w-4 h-4" />
+          Field Guide
+        </Link>
+      </div>
 
       <HeroSection onScrollToUpload={scrollToUpload} />
 
