@@ -143,7 +143,47 @@ const Index = () => {
     }
   }, [postSighting]);
 
-  return (
+  const handleVideoProcessed = useCallback(async (frame: string, audio: string | null, mimeType: string) => {
+    setIsAnalyzing(true);
+    setResult(null);
+    setImagePreview(null);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/identify-video`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ frame, audio, mimeType }),
+        }
+      );
+
+      if (response.status === 429) {
+        toast.error("Rate limit reached. Please try again in a moment.");
+        setIsAnalyzing(false);
+        return;
+      }
+      if (response.status === 402) {
+        toast.error("AI credits exhausted.");
+        setIsAnalyzing(false);
+        return;
+      }
+      if (!response.ok) throw new Error("Failed to identify from video");
+
+      const data = await response.json();
+      setResult(data);
+      setImagePreview(frame);
+      postSighting(data, frame);
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [postSighting]);
     <div className="min-h-screen bg-background">
       {/* Floating nav */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
