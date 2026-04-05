@@ -34,10 +34,10 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Rate limit check by IP
+    // Rate limit check by IP (uses separate audit table)
     const cutoff = new Date(Date.now() - RATE_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
     const { count } = await supabase
-      .from("sightings")
+      .from("rate_limit_log")
       .select("*", { count: "exact", head: true })
       .eq("client_ip", clientIp)
       .gte("created_at", cutoff);
@@ -60,8 +60,18 @@ Deno.serve(async (req) => {
       lat,
       lng,
       image_thumbnail: imageThumbnail || null,
-      client_ip: clientIp,
     }).select().single();
+
+    if (error) {
+      console.error("Insert error:", error);
+      throw new Error(error.message);
+    }
+
+    // Log IP in separate audit table for rate limiting
+    await supabase.from("rate_limit_log").insert({
+      client_ip: clientIp,
+      sighting_id: data.id,
+    });
 
     if (error) {
       console.error("Insert error:", error);
