@@ -21,6 +21,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/field-guide" element={<Pokedex />} />
           <Route path="/nearby" element={<NearbyFeed />} />
+          <Route path="/learn" element={<LearnBeforeYouGo />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
