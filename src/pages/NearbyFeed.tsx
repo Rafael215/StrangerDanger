@@ -80,7 +80,7 @@ const NearbyFeed = () => {
     async function fetchSightings() {
       setLoading(true);
       const { data, error } = await supabase
-        .from("sightings")
+        .from("public_sightings" as any)
         .select("*")
         .order("created_at", { ascending: false })
         .limit(50);
