@@ -66,7 +66,7 @@ serve(async (req) => {
                   survivalNote: { type: "string", description: "What to do if you hear this sound while hiking" },
                   difficulty: { type: "string", enum: ["easy", "medium", "hard"] },
                 },
-                required: ["soundDescription", "timeOfDay", "habitat", "hint", "options", "correctId", "correctAnimal", "funFact", "survivalNote", "difficulty"],
+                required: ["soundDescription", "audioPrompt", "timeOfDay", "habitat", "hint", "options", "correctId", "correctAnimal", "funFact", "survivalNote", "difficulty"],
                 additionalProperties: false,
               },
             },
