@@ -74,13 +74,14 @@ const Pokedex = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-4 gap-3 mb-8"
+          className="grid grid-cols-5 gap-3 mb-8"
         >
           {[
             { label: "Total", value: stats.total, color: "text-foreground" },
             { label: "Safe", value: stats.safe, color: "text-safe" },
             { label: "Caution", value: stats.caution, color: "text-caution" },
             { label: "Danger", value: stats.danger, color: "text-danger" },
+            { label: "At Risk", value: stats.endangered, color: "text-conservation" },
           ].map((s) => (
             <div
               key={s.label}
