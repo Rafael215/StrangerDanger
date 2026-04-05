@@ -155,6 +155,12 @@ const Pokedex = () => {
                           {entry.threatLevel}
                         </div>
                       </div>
+                      {isEndangered(entry.conservationStatus) && (
+                        <div className="flex items-center gap-1 text-conservation text-[10px] font-semibold mb-1">
+                          <TreePine className="w-3 h-3" />
+                          {entry.conservationStatus}
+                        </div>
+                      )}
                       <p className="text-xs text-muted-foreground line-clamp-2">
                         {entry.profile}
                       </p>
