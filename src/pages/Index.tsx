@@ -1,16 +1,132 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useRef, useCallback } from "react";
+import { toast } from "sonner";
+import HeroSection from "@/components/HeroSection";
+import ImageUploader from "@/components/ImageUploader";
+import ResultCard, { type AnimalResult } from "@/components/ResultCard";
+import { motion } from "framer-motion";
+import { Binoculars } from "lucide-react";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [result, setResult] = useState<AnimalResult | null>(null);
+  const uploadRef = useRef<HTMLDivElement>(null);
+
+  const scrollToUpload = () => {
+    uploadRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleImageSelected = useCallback(async (file: File) => {
+    setIsAnalyzing(true);
+    setResult(null);
+
+    try {
+      const base64 = await fileToBase64(file);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/identify-animal`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ image: base64 }),
+        }
+      );
+
+      if (response.status === 429) {
+        toast.error("Rate limit reached. Please try again in a moment.");
+        setIsAnalyzing(false);
+        return;
+      }
+      if (response.status === 402) {
+        toast.error("AI credits exhausted. Please add funds to continue.");
+        setIsAnalyzing(false);
+        return;
+      }
+      if (!response.ok) {
+        throw new Error("Failed to identify animal");
+      }
+
+      const data = await response.json();
+      setResult(data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background">
+      <HeroSection onScrollToUpload={scrollToUpload} />
+
+      {/* Upload Section */}
+      <section
+        ref={uploadRef}
+        className="relative py-24 px-4"
+      >
+        <div className="absolute inset-0 topo-pattern opacity-10" />
+        <div className="relative z-10 container mx-auto max-w-2xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-10"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary text-muted-foreground text-xs font-medium uppercase tracking-wider mb-4">
+              <Binoculars className="w-3.5 h-3.5" />
+              Step 1
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground">
+              Upload Your Sighting
+            </h2>
+            <p className="text-muted-foreground mt-2">
+              Take or upload a photo of the animal you encountered
+            </p>
+          </motion.div>
+
+          <ImageUploader
+            onImageSelected={handleImageSelected}
+            isAnalyzing={isAnalyzing}
+          />
+
+          {/* Results */}
+          {result && (
+            <div className="mt-12">
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                  Analysis Complete
+                </div>
+              </div>
+              <ResultCard result={result} />
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border py-8 px-4">
+        <div className="container mx-auto text-center">
+          <p className="text-sm text-muted-foreground">
+            <span className="text-foreground font-semibold">Stranger</span>
+            <span className="text-primary font-semibold">Danger</span>
+            {" "}— AI wildlife safety for the modern explorer
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
 
-const Index = PlaceholderIndex;
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export default Index;
