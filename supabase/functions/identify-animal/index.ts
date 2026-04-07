@@ -1,24 +1,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import {
+  assertDataUrl,
+  errorResponse,
+  handlePreflight,
+  jsonResponse,
+  parseJsonBody,
+  requirePost,
+} from "../_shared/security.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
 
   try {
-    const { image } = await req.json();
-    if (!image) {
-      return new Response(JSON.stringify({ error: "No image provided" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    requirePost(req);
+    const { image } = await parseJsonBody<{ image?: string }>(req);
+    const sanitizedImage = assertDataUrl(
+      image,
+      "image",
+      ["data:image/jpeg", "data:image/jpg", "data:image/png", "data:image/webp"],
+      8 * 1024 * 1024,
+    );
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
@@ -53,7 +55,7 @@ If the image does not contain an identifiable animal, still use the tool but set
               content: [
                 {
                   type: "image_url",
-                  image_url: { url: image },
+                  image_url: { url: sanitizedImage },
                 },
                 {
                   type: "text",
@@ -142,15 +144,18 @@ If the image does not contain an identifiable animal, still use the tool but set
     );
 
     if (response.status === 429) {
-      return new Response(
-        JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonResponse(
+        req,
+        429,
+        { error: "Rate limit exceeded. Please try again later." },
+        { "Retry-After": "60" },
       );
     }
     if (response.status === 402) {
-      return new Response(
-        JSON.stringify({ error: "AI credits exhausted. Please add funds." }),
-        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonResponse(
+        req,
+        402,
+        { error: "AI credits exhausted. Please add funds." },
       );
     }
     if (!response.ok) {
@@ -168,19 +173,8 @@ If the image does not contain an identifiable animal, still use the tool but set
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(req, 200, result);
   } catch (e) {
-    console.error("identify-animal error:", e);
-    return new Response(
-      JSON.stringify({
-        error: e instanceof Error ? e.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return errorResponse(req, e, "identify-animal error:");
   }
 });

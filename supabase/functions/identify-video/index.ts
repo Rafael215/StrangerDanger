@@ -1,24 +1,42 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import {
+  assertOptionalDataUrl,
+  assertString,
+  errorResponse,
+  handlePreflight,
+  jsonResponse,
+  parseJsonBody,
+  requirePost,
+  HttpError,
+} from "../_shared/security.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
 
   try {
-    const { frame, audio, mimeType } = await req.json();
-    if (!frame && !audio) {
-      return new Response(JSON.stringify({ error: "No video data provided" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    requirePost(req);
+    const { frame, audio, mimeType } = await parseJsonBody<{
+      frame?: string;
+      audio?: string | null;
+      mimeType?: string;
+    }>(req);
+    const sanitizedFrame = assertOptionalDataUrl(
+      frame,
+      "frame",
+      ["data:image/jpeg", "data:image/jpg", "data:image/png", "data:image/webp"],
+      8 * 1024 * 1024,
+    );
+    const sanitizedAudio = assertOptionalDataUrl(
+      audio,
+      "audio",
+      ["data:audio/webm", "data:audio/ogg", "data:audio/wav", "data:audio/x-wav", "data:audio/mp3", "data:audio/mpeg", "data:video/mp4", "data:video/webm", "data:video/quicktime"],
+      12 * 1024 * 1024,
+    );
+    if (!sanitizedFrame && !sanitizedAudio) {
+      throw new HttpError(400, "No video data provided");
     }
+    const resolvedMimeType = assertString(mimeType ?? "video/mp4", "mimeType", 64);
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
@@ -36,24 +54,24 @@ Be accurate with your identification. If you're unsure, give a lower confidence 
 
     const userContent: any[] = [];
 
-    if (frame) {
+    if (sanitizedFrame) {
       userContent.push({
         type: "image_url",
-        image_url: { url: frame },
+        image_url: { url: sanitizedFrame },
       });
     }
 
-    if (audio) {
+    if (sanitizedAudio) {
       const formatMap: Record<string, string> = {
         "audio/webm": "mp3", "audio/webm; codecs=opus": "mp3",
         "audio/ogg": "mp3", "audio/wav": "wav", "audio/x-wav": "wav",
         "audio/mp3": "mp3", "audio/mpeg": "mp3",
       };
-      const resolvedFormat = formatMap[(mimeType || "audio/webm").toLowerCase()] || "mp3";
+      const resolvedFormat = formatMap[resolvedMimeType.toLowerCase()] || "mp3";
       userContent.push({
         type: "input_audio",
         input_audio: {
-          data: audio.replace(/^data:[^;]+;base64,/, ""),
+          data: sanitizedAudio.replace(/^data:[^;]+;base64,/, ""),
           format: resolvedFormat,
         },
       });
@@ -109,15 +127,18 @@ Be accurate with your identification. If you're unsure, give a lower confidence 
     );
 
     if (response.status === 429) {
-      return new Response(
-        JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonResponse(
+        req,
+        429,
+        { error: "Rate limit exceeded. Please try again later." },
+        { "Retry-After": "60" },
       );
     }
     if (response.status === 402) {
-      return new Response(
-        JSON.stringify({ error: "AI credits exhausted. Please add funds." }),
-        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonResponse(
+        req,
+        402,
+        { error: "AI credits exhausted. Please add funds." },
       );
     }
     if (!response.ok) {
@@ -132,14 +153,8 @@ Be accurate with your identification. If you're unsure, give a lower confidence 
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(req, 200, result);
   } catch (e) {
-    console.error("identify-video error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return errorResponse(req, e, "identify-video error:");
   }
 });

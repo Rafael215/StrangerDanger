@@ -1,18 +1,42 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import {
+  assertArray,
+  assertEnum,
+  assertString,
+  errorResponse,
+  handlePreflight,
+  jsonResponse,
+  parseJsonBody,
+  requirePost,
+  HttpError,
+} from "../_shared/security.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ACTIONS = ["start", "choose"] as const;
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
 
   try {
-    const { action, scenario, history } = await req.json();
+    requirePost(req);
+    const { action, scenario, history } = await parseJsonBody<{
+      action?: string;
+      scenario?: string;
+      history?: Array<{ situation?: string; choice?: string }>;
+    }>(req);
+    const sanitizedAction = assertEnum(action, "action", ACTIONS);
+    const sanitizedScenario = scenario ? assertString(scenario, "scenario", 240) : "";
+    const sanitizedHistory = history
+      ? assertArray(history, "history", 6).map((entry) => {
+          if (!entry || typeof entry !== "object") {
+            throw new HttpError(400, "history entries must be objects");
+          }
+          return {
+            situation: assertString(entry.situation, "history.situation", 800),
+            choice: assertString(entry.choice, "history.choice", 240),
+          };
+        })
+      : [];
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
@@ -22,10 +46,10 @@ serve(async (req) => {
     const tools = [];
     let tool_choice: unknown = undefined;
 
-    if (action === "start") {
+    if (sanitizedAction === "start") {
       systemPrompt = `You are a wildlife survival instructor creating interactive "choose your adventure" scenarios. Generate a realistic outdoor survival scenario where the user encounters a wild animal. Make it vivid and immersive.`;
-      userPrompt = scenario
-        ? `Create a survival scenario about: ${scenario}`
+      userPrompt = sanitizedScenario
+        ? `Create a survival scenario about: ${sanitizedScenario}`
         : `Create a random survival scenario involving a wild animal encounter during a hike.`;
 
       tools.push({
@@ -60,16 +84,16 @@ serve(async (req) => {
         },
       });
       tool_choice = { type: "function", function: { name: "create_scenario" } };
-    } else if (action === "choose") {
+    } else if (sanitizedAction === "choose") {
       systemPrompt = `You are a wildlife survival instructor. The user is in an interactive scenario and has made a choice. Describe what happens next, whether it was the right call, and provide the next set of choices OR an ending.
 
 If the scenario should end (after 2-3 choices), provide an outcome with a survival score and lessons learned. Otherwise provide new choices.`;
 
-      const historyText = (history || [])
+      const historyText = sanitizedHistory
         .map((h: { situation: string; choice: string }) => `Situation: ${h.situation}\nChoice: ${h.choice}`)
         .join("\n\n");
 
-      userPrompt = `Scenario history:\n${historyText}\n\nThe user's latest choice: "${scenario}"`;
+      userPrompt = `Scenario history:\n${historyText}\n\nThe user's latest choice: "${sanitizedScenario}"`;
 
       tools.push({
         type: "function",
@@ -119,7 +143,7 @@ If the scenario should end (after 2-3 choices), provide an outcome with a surviv
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
       });
     }
 
@@ -141,14 +165,10 @@ If the scenario should end (after 2-3 choices), provide an outcome with a surviv
     });
 
     if (response.status === 429) {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse(req, 429, { error: "Rate limit exceeded" }, { "Retry-After": "60" });
     }
     if (response.status === 402) {
-      return new Response(JSON.stringify({ error: "AI credits exhausted" }), {
-        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse(req, 402, { error: "AI credits exhausted" });
     }
     if (!response.ok) {
       const t = await response.text();
@@ -161,13 +181,8 @@ If the scenario should end (after 2-3 choices), provide an outcome with a surviv
     if (!toolCall) throw new Error("No tool call in response");
 
     const result = JSON.parse(toolCall.function.arguments);
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(req, 200, result);
   } catch (e) {
-    console.error("survival-scenario error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return errorResponse(req, e, "survival-scenario error:");
   }
 });

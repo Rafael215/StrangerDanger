@@ -1,24 +1,22 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import {
+  assertString,
+  errorResponse,
+  handlePreflight,
+  jsonResponse,
+  parseJsonBody,
+  requirePost,
+} from "../_shared/security.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
 
   try {
-    const { habitat, region } = await req.json();
-    if (!habitat) {
-      return new Response(JSON.stringify({ error: "No habitat provided" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    requirePost(req);
+    const { habitat, region } = await parseJsonBody<{ habitat?: string; region?: string }>(req);
+    const sanitizedHabitat = assertString(habitat, "habitat", 80);
+    const sanitizedRegion = region ? assertString(region, "region", 80) : undefined;
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
@@ -29,9 +27,9 @@ You MUST respond using the "habitat_briefing" tool/function provided. Do not res
 
 Provide 5-8 animals that a hiker would most likely encounter in this habitat. For each animal, assess the real danger level. Include a mix of safe, cautionary, and dangerous animals. Make the briefing educational and practical.`;
 
-    const userPrompt = region
-      ? `Give me a wildlife safety briefing for hiking in ${habitat} habitat in the ${region} region.`
-      : `Give me a wildlife safety briefing for hiking in ${habitat} habitat.`;
+    const userPrompt = sanitizedRegion
+      ? `Give me a wildlife safety briefing for hiking in ${sanitizedHabitat} habitat in the ${sanitizedRegion} region.`
+      : `Give me a wildlife safety briefing for hiking in ${sanitizedHabitat} habitat.`;
 
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
@@ -122,15 +120,18 @@ Provide 5-8 animals that a hiker would most likely encounter in this habitat. Fo
     );
 
     if (response.status === 429) {
-      return new Response(
-        JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonResponse(
+        req,
+        429,
+        { error: "Rate limit exceeded. Please try again later." },
+        { "Retry-After": "60" },
       );
     }
     if (response.status === 402) {
-      return new Response(
-        JSON.stringify({ error: "AI credits exhausted. Please add funds." }),
-        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonResponse(
+        req,
+        402,
+        { error: "AI credits exhausted. Please add funds." },
       );
     }
     if (!response.ok) {
@@ -145,14 +146,8 @@ Provide 5-8 animals that a hiker would most likely encounter in this habitat. Fo
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(req, 200, result);
   } catch (e) {
-    console.error("habitat-briefing error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return errorResponse(req, e, "habitat-briefing error:");
   }
 });

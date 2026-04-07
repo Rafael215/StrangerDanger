@@ -1,37 +1,62 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import {
+  assertArray,
+  assertString,
+  errorResponse,
+  handlePreflight,
+  jsonResponse,
+  parseJsonBody,
+  requirePost,
+  streamResponse,
+  HttpError,
+} from "../_shared/security.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
 
   try {
-    const { messages, animalContext } = await req.json();
-    if (!messages || !Array.isArray(messages)) {
-      return new Response(JSON.stringify({ error: "No messages provided" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    requirePost(req);
+    const { messages, animalContext } = await parseJsonBody<{
+      messages?: Array<{ role?: string; content?: string }>;
+      animalContext?: Record<string, unknown>;
+    }>(req);
+    const sanitizedMessages = assertArray(messages, "messages", 12).map((message) => {
+      if (!message || typeof message !== "object") {
+        throw new HttpError(400, "messages entries must be objects");
+      }
+
+      const role = assertString((message as { role?: string }).role, "message role", 16);
+      if (!["user", "assistant", "system"].includes(role)) {
+        throw new HttpError(400, "message role is invalid");
+      }
+
+      return {
+        role,
+        content: assertString((message as { content?: string }).content, "message content", 1200),
+      };
+    });
+    const context = animalContext ?? {};
+    const name = assertString(context.name, "animalContext.name", 120);
+    const scientificName = assertString(context.scientificName, "animalContext.scientificName", 160);
+    const threatLevel = assertString(context.threatLevel, "animalContext.threatLevel", 40);
+    const conservationStatus = assertString(context.conservationStatus, "animalContext.conservationStatus", 120);
+    const habitat = assertString(context.habitat, "animalContext.habitat", 160);
+    const profile = assertString(context.profile, "animalContext.profile", 1200);
+    const threatReason = assertString(context.threatReason, "animalContext.threatReason", 500);
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const systemPrompt = `You are an expert wildlife biologist having a conversation about a specific animal that was just identified. Here is the context about the animal:
 
-Name: ${animalContext.name}
-Scientific Name: ${animalContext.scientificName}
-Threat Level: ${animalContext.threatLevel}
-Conservation Status: ${animalContext.conservationStatus}
-Habitat: ${animalContext.habitat}
-Profile: ${animalContext.profile}
-Threat Reason: ${animalContext.threatReason}
+Name: ${name}
+Scientific Name: ${scientificName}
+Threat Level: ${threatLevel}
+Conservation Status: ${conservationStatus}
+Habitat: ${habitat}
+Profile: ${profile}
+Threat Reason: ${threatReason}
 
 Answer the user's follow-up questions about this animal. Be educational, accurate, and safety-focused. Keep answers concise (2-4 sentences) unless the user asks for more detail. If asked about something unrelated to wildlife, gently redirect back to the animal topic.`;
 
@@ -47,7 +72,7 @@ Answer the user's follow-up questions about this animal. Be educational, accurat
           model: "gemini-2.5-flash",
           messages: [
             { role: "system", content: systemPrompt },
-            ...messages,
+            ...sanitizedMessages,
           ],
           stream: true,
         }),
@@ -55,15 +80,18 @@ Answer the user's follow-up questions about this animal. Be educational, accurat
     );
 
     if (response.status === 429) {
-      return new Response(
-        JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonResponse(
+        req,
+        429,
+        { error: "Rate limit exceeded. Please try again later." },
+        { "Retry-After": "60" },
       );
     }
     if (response.status === 402) {
-      return new Response(
-        JSON.stringify({ error: "AI credits exhausted. Please add funds." }),
-        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonResponse(
+        req,
+        402,
+        { error: "AI credits exhausted. Please add funds." },
       );
     }
     if (!response.ok) {
@@ -72,14 +100,8 @@ Answer the user's follow-up questions about this animal. Be educational, accurat
       throw new Error("AI gateway error");
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-    });
+    return streamResponse(req, response.body);
   } catch (e) {
-    console.error("animal-chat error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return errorResponse(req, e, "animal-chat error:");
   }
 });
