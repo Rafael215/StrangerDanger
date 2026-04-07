@@ -1,24 +1,28 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import {
+  assertDataUrl,
+  assertString,
+  errorResponse,
+  handlePreflight,
+  jsonResponse,
+  parseJsonBody,
+  requirePost,
+} from "../_shared/security.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
 
   try {
-    const { audio, mimeType } = await req.json();
-    if (!audio) {
-      return new Response(JSON.stringify({ error: "No audio provided" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    requirePost(req);
+    const { audio, mimeType } = await parseJsonBody<{ audio?: string; mimeType?: string }>(req);
+    const sanitizedAudio = assertDataUrl(
+      audio,
+      "audio",
+      ["data:audio/webm", "data:audio/ogg", "data:audio/wav", "data:audio/x-wav", "data:audio/mp3", "data:audio/mpeg"],
+      12 * 1024 * 1024,
+    );
+    const resolvedMimeType = assertString(mimeType ?? "audio/webm", "mimeType", 64);
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
@@ -43,7 +47,7 @@ If the audio does not contain an identifiable animal sound, still use the tool b
       "audio/wav": "wav", "audio/x-wav": "wav", "audio/wave": "wav",
       "audio/mp3": "mp3", "audio/mpeg": "mp3",
     };
-    const resolvedFormat = formatMap[(mimeType || "audio/webm").toLowerCase()] || "mp3";
+    const resolvedFormat = formatMap[resolvedMimeType.toLowerCase()] || "mp3";
 
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
@@ -63,7 +67,7 @@ If the audio does not contain an identifiable animal sound, still use the tool b
                 {
                   type: "input_audio",
                   input_audio: {
-                    data: audio.includes(",") ? audio.split(",")[1] : audio,
+                    data: sanitizedAudio.includes(",") ? sanitizedAudio.split(",")[1] : sanitizedAudio,
                     format: resolvedFormat,
                   },
                 },
@@ -151,15 +155,18 @@ If the audio does not contain an identifiable animal sound, still use the tool b
     );
 
     if (response.status === 429) {
-      return new Response(
-        JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonResponse(
+        req,
+        429,
+        { error: "Rate limit exceeded. Please try again later." },
+        { "Retry-After": "60" },
       );
     }
     if (response.status === 402) {
-      return new Response(
-        JSON.stringify({ error: "AI credits exhausted. Please add funds." }),
-        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonResponse(
+        req,
+        402,
+        { error: "AI credits exhausted. Please add funds." },
       );
     }
     if (!response.ok) {
@@ -177,19 +184,8 @@ If the audio does not contain an identifiable animal sound, still use the tool b
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(req, 200, result);
   } catch (e) {
-    console.error("identify-animal-sound error:", e);
-    return new Response(
-      JSON.stringify({
-        error: e instanceof Error ? e.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return errorResponse(req, e, "identify-animal-sound error:");
   }
 });

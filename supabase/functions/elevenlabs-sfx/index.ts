@@ -1,25 +1,24 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import {
+  assertNumber,
+  assertString,
+  buildHeaders,
+  errorResponse,
+  handlePreflight,
+  jsonResponse,
+  parseJsonBody,
+  requirePost,
+} from "../_shared/security.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
 
   try {
-    const { prompt, duration } = await req.json();
-
-    if (!prompt || typeof prompt !== "string") {
-      return new Response(JSON.stringify({ error: "prompt is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    requirePost(req);
+    const { prompt, duration } = await parseJsonBody<{ prompt?: string; duration?: number }>(req);
+    const sanitizedPrompt = assertString(prompt, "prompt", 200);
+    const sanitizedDuration = duration == null ? 5 : assertNumber(duration, "duration", { min: 1, max: 8 });
 
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
     if (!ELEVENLABS_API_KEY) {
@@ -33,8 +32,8 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        text: prompt,
-        duration_seconds: duration || 5,
+        text: sanitizedPrompt,
+        duration_seconds: sanitizedDuration,
         prompt_influence: 0.3,
       }),
     });
@@ -42,25 +41,18 @@ serve(async (req) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error("ElevenLabs error:", response.status, errText);
-      return new Response(JSON.stringify({ error: `ElevenLabs API error: ${response.status}` }), {
-        status: response.status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse(req, response.status, { error: `ElevenLabs API error: ${response.status}` });
     }
 
     const audioBuffer = await response.arrayBuffer();
 
     return new Response(audioBuffer, {
       headers: {
-        ...corsHeaders,
+        ...buildHeaders(req),
         "Content-Type": "audio/mpeg",
       },
     });
   } catch (e) {
-    console.error("elevenlabs-sfx error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return errorResponse(req, e, "elevenlabs-sfx error:");
   }
 });

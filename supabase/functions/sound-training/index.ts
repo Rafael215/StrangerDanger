@@ -1,26 +1,39 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import {
+  assertEnum,
+  assertString,
+  errorResponse,
+  handlePreflight,
+  jsonResponse,
+  parseJsonBody,
+  requirePost,
+} from "../_shared/security.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ACTIONS = ["generate_quiz"] as const;
+const DIFFICULTIES = ["easy", "medium", "hard"] as const;
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
 
   try {
-    const { action, habitat, difficulty } = await req.json();
+    requirePost(req);
+    const { action, habitat, difficulty } = await parseJsonBody<{
+      action?: string;
+      habitat?: string;
+      difficulty?: string;
+    }>(req);
+    const sanitizedAction = assertEnum(action, "action", ACTIONS);
+    const sanitizedDifficulty = difficulty ? assertEnum(difficulty, "difficulty", DIFFICULTIES) : "medium";
+    const sanitizedHabitat = habitat ? assertString(habitat, "habitat", 80) : undefined;
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
-    if (action === "generate_quiz") {
+    if (sanitizedAction === "generate_quiz") {
       const systemPrompt = `You are a wildlife audio expert creating an animal sound identification quiz. Generate a quiz card about an animal sound that hikers might hear in the wild. Include a vivid text description of what the sound is like so users can learn to recognize it.`;
 
-      const userPrompt = `Create an animal sound quiz for a ${difficulty || "medium"} difficulty level${habitat ? ` in a ${habitat} habitat` : ""}. The user should try to guess what animal makes this sound based on your description.`;
+      const userPrompt = `Create an animal sound quiz for a ${sanitizedDifficulty} difficulty level${sanitizedHabitat ? ` in a ${sanitizedHabitat} habitat` : ""}. The user should try to guess what animal makes this sound based on your description.`;
 
       const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
@@ -76,14 +89,10 @@ serve(async (req) => {
       });
 
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse(req, 429, { error: "Rate limit exceeded" }, { "Retry-After": "60" });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted" }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse(req, 402, { error: "AI credits exhausted" });
       }
       if (!response.ok) throw new Error("AI gateway error");
 
@@ -92,18 +101,11 @@ serve(async (req) => {
       if (!toolCall) throw new Error("No tool call");
 
       const result = JSON.parse(toolCall.function.arguments);
-      return new Response(JSON.stringify(result), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse(req, 200, result);
     }
 
-    return new Response(JSON.stringify({ error: "Invalid action" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(req, 400, { error: "Invalid action" });
   } catch (e) {
-    console.error("sound-training error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return errorResponse(req, e, "sound-training error:");
   }
 });

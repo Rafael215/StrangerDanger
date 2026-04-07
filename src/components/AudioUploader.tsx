@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, X, Loader2, Mic, MicOff, Volume2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AudioUploaderProps {
   onAudioSelected: (base64: string, mimeType: string) => void;
@@ -26,7 +27,14 @@ const AudioUploader = ({ onAudioSelected, isAnalyzing }: AudioUploaderProps) => 
 
   const handleFile = useCallback(
     async (file: File) => {
-      if (!file.type.startsWith("audio/")) return;
+      if (!file.type.startsWith("audio/")) {
+        toast.error("Please upload an audio file.");
+        return;
+      }
+      if (file.size > 12 * 1024 * 1024) {
+        toast.error("Audio files must be 12MB or smaller.");
+        return;
+      }
       const url = URL.createObjectURL(file);
       setAudioUrl(url);
       setAudioName(file.name);
@@ -84,6 +92,9 @@ const AudioUploader = ({ onAudioSelected, isAnalyzing }: AudioUploaderProps) => 
   };
 
   const clearAudio = () => {
+    if (audioUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(audioUrl);
+    }
     setAudioUrl(null);
     setAudioName("");
     if (fileInputRef.current) fileInputRef.current.value = "";

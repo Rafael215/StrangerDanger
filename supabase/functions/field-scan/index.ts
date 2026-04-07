@@ -1,23 +1,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import {
+  assertDataUrl,
+  errorResponse,
+  handlePreflight,
+  jsonResponse,
+  parseJsonBody,
+  requirePost,
+} from "../_shared/security.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
 
   try {
-    const { image } = await req.json();
-    if (!image) {
-      return new Response(JSON.stringify({ error: "No image provided" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    requirePost(req);
+    const { image } = await parseJsonBody<{ image?: string }>(req);
+    const sanitizedImage = assertDataUrl(
+      image,
+      "image",
+      ["data:image/jpeg", "data:image/jpg", "data:image/png", "data:image/webp"],
+      8 * 1024 * 1024,
+    );
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
@@ -38,13 +41,13 @@ Be thorough — identify at least 4-8 elements. Include both obvious and subtle 
         model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              { type: "image_url", image_url: { url: image } },
-              { type: "text", text: "Scan this environment and identify all notable natural elements, wildlife signs, plants, terrain features, and potential hazards." },
-            ],
-          },
+            {
+              role: "user",
+              content: [
+                { type: "image_url", image_url: { url: sanitizedImage } },
+                { type: "text", text: "Scan this environment and identify all notable natural elements, wildlife signs, plants, terrain features, and potential hazards." },
+              ],
+            },
         ],
         tools: [{
           type: "function",
@@ -86,14 +89,10 @@ Be thorough — identify at least 4-8 elements. Include both obvious and subtle 
     });
 
     if (response.status === 429) {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse(req, 429, { error: "Rate limit exceeded" }, { "Retry-After": "60" });
     }
     if (response.status === 402) {
-      return new Response(JSON.stringify({ error: "AI credits exhausted" }), {
-        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse(req, 402, { error: "AI credits exhausted" });
     }
     if (!response.ok) throw new Error("AI gateway error");
 
@@ -102,13 +101,8 @@ Be thorough — identify at least 4-8 elements. Include both obvious and subtle 
     if (!toolCall) throw new Error("No tool call");
 
     const result = JSON.parse(toolCall.function.arguments);
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(req, 200, result);
   } catch (e) {
-    console.error("field-scan error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return errorResponse(req, e, "field-scan error:");
   }
 });

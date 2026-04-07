@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, X, Loader2, Camera } from "lucide-react";
+import { toast } from "sonner";
 
 interface ImageUploaderProps {
   onImageSelected: (file: File, preview: string) => void;
@@ -14,7 +15,14 @@ const ImageUploader = ({ onImageSelected, isAnalyzing }: ImageUploaderProps) => 
 
   const handleFile = useCallback(
     (file: File) => {
-      if (!file.type.startsWith("image/")) return;
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please upload an image file.");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Images must be 10MB or smaller.");
+        return;
+      }
       const url = URL.createObjectURL(file);
       setPreview(url);
       onImageSelected(file, url);
@@ -33,6 +41,9 @@ const ImageUploader = ({ onImageSelected, isAnalyzing }: ImageUploaderProps) => 
   );
 
   const clearImage = () => {
+    if (preview?.startsWith("blob:")) {
+      URL.revokeObjectURL(preview);
+    }
     setPreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };

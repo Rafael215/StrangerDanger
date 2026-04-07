@@ -1,34 +1,51 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import {
+  assertEnum,
+  assertNumber,
+  assertOptionalDataUrl,
+  assertString,
+  errorResponse,
+  handlePreflight,
+  jsonResponse,
+  parseJsonBody,
+  requirePost,
+} from "../_shared/security.ts";
 
 const RATE_LIMIT = 5;
 const RATE_WINDOW_HOURS = 1;
+const THREAT_LEVELS = ["Safe", "Caution", "Danger"] as const;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflight = handlePreflight(req);
+  if (preflight) return preflight;
 
   try {
+    requirePost(req);
     const clientIp =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("cf-connecting-ip") ||
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       "unknown";
 
-    const body = await req.json();
+    const body = await parseJsonBody<Record<string, unknown>>(req);
     const { name, scientificName, threatLevel, conservationStatus, profile, habitat, confidence, lat, lng, imageThumbnail, locationLabel } = body;
-
-    if (!name || !scientificName || !threatLevel || !lat || !lng) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const sanitizedName = assertString(name, "name", 120);
+    const sanitizedScientificName = assertString(scientificName, "scientificName", 160);
+    const sanitizedThreatLevel = assertEnum(threatLevel, "threatLevel", THREAT_LEVELS);
+    const sanitizedConservationStatus = assertString(conservationStatus ?? "Unknown", "conservationStatus", 120);
+    const sanitizedProfile = assertString(profile ?? "", "profile", 2000, { minLength: 0, optional: true });
+    const sanitizedHabitat = assertString(habitat ?? "", "habitat", 160, { minLength: 0, optional: true });
+    const sanitizedConfidence = confidence == null ? 0 : assertNumber(confidence, "confidence", { min: 0, max: 1 });
+    const sanitizedLat = assertNumber(lat, "lat", { min: -90, max: 90 });
+    const sanitizedLng = assertNumber(lng, "lng", { min: -180, max: 180 });
+    const sanitizedImageThumbnail = assertOptionalDataUrl(
+      imageThumbnail,
+      "imageThumbnail",
+      ["data:image/jpeg", "data:image/jpg", "data:image/png", "data:image/webp"],
+      2 * 1024 * 1024,
+    );
+    const sanitizedLocationLabel = locationLabel
+      ? assertString(locationLabel, "locationLabel", 120)
+      : null;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -43,18 +60,20 @@ Deno.serve(async (req) => {
       .gte("created_at", cutoff);
 
     if ((count ?? 0) >= RATE_LIMIT) {
-      return new Response(
-        JSON.stringify({ error: "Rate limit exceeded. Try again later." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonResponse(
+        req,
+        429,
+        { error: "Rate limit exceeded. Try again later." },
+        { "Retry-After": "3600" },
       );
     }
 
     // Reverse geocode to get location label if not provided
-    let resolvedLocation = locationLabel || null;
-    if (!resolvedLocation && lat && lng) {
+    let resolvedLocation = sanitizedLocationLabel;
+    if (!resolvedLocation) {
       try {
         const geoRes = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=10`,
+          `https://nominatim.openstreetmap.org/reverse?lat=${sanitizedLat}&lon=${sanitizedLng}&format=json&zoom=10`,
           { headers: { "User-Agent": "StrangerDanger/1.0" } }
         );
         if (geoRes.ok) {
@@ -68,16 +87,16 @@ Deno.serve(async (req) => {
     }
 
     const { data, error } = await supabase.from("sightings").insert({
-      name,
-      scientific_name: scientificName,
-      threat_level: threatLevel,
-      conservation_status: conservationStatus,
-      profile: profile || "",
-      habitat: habitat || "",
-      confidence: confidence || 0,
-      lat,
-      lng,
-      image_thumbnail: imageThumbnail || null,
+      name: sanitizedName,
+      scientific_name: sanitizedScientificName,
+      threat_level: sanitizedThreatLevel,
+      conservation_status: sanitizedConservationStatus,
+      profile: sanitizedProfile,
+      habitat: sanitizedHabitat,
+      confidence: sanitizedConfidence,
+      lat: sanitizedLat,
+      lng: sanitizedLng,
+      image_thumbnail: sanitizedImageThumbnail,
       location_label: resolvedLocation,
     }).select().single();
 
@@ -92,14 +111,8 @@ Deno.serve(async (req) => {
       sighting_id: data.id,
     });
 
-    return new Response(JSON.stringify({ success: true, id: data.id }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(req, 200, { success: true, id: data.id });
   } catch (e) {
-    console.error("post-sighting error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return errorResponse(req, e, "post-sighting error:");
   }
 });
