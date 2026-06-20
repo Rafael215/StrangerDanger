@@ -1,5 +1,5 @@
 # StrangerDanger — AI Wildlife Safety & Conservation
-Jordan here checking in
+
 **AI-powered wildlife identification and safety companion for the modern explorer.**
 
 Built for hackathon — covers **multi-device hardware**, **AI/ML**, and **conservation** tracks.
@@ -92,3 +92,4 @@ graph TD
 npm install
 npm run dev
 ```
+Jordan here checking in
